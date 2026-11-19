@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FB Ad Blocker: Hide Sponsored Posts on Facebook</title>
+    <meta name="description" content="Free Chrome extension that hides sponsored posts in your Facebook feed and the Sponsored box in the right column. One click on/off, zero tracking." />
+    <meta property="og:title" content="FB Ad Blocker: Scroll Facebook without the ads" />
+    <meta property="og:description" content="Hide sponsored posts in your Facebook feed. One click on/off, zero tracking." />
+    <meta property="og:image" content="assets/og-image.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="assets/icon-32.png" />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --bg-soft: #f8fafc; /* slate-50 */
+        --card: #ffffff;
+        --border: #e2e8f0; /* slate-200 */
+        --text: #0f172a; /* slate-900 */
+        --muted: #475569; /* slate-600 */
+        --accent: #2563eb; /* blue-600 */
+        --accent-hover: #1d4ed8; /* blue-700 */
+        --accent-soft: #dbeafe; /* blue-100 */
+        --grad: linear-gradient(135deg, #2563eb, #4338ca); /* blue-600 → indigo-700 */
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0b1120;
+          --bg-soft: #0f172a;
+          --card: #1e293b;
+          --border: #334155;
+          --text: #f1f5f9;
+          --muted: #94a3b8;
+          --accent: #60a5fa;
+          --accent-hover: #93c5fd;
+          --accent-soft: #1e3a8a;
+        }
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font: 17px/1.6 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      img,
+      video {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      a {
+        color: var(--accent);
+      }
+      .wrap {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+      section {
+        padding: 88px 0;
+      }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h2 {
+        margin-top: 8px;
+        font-size: clamp(30px, 4vw, 42px);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+      .lead {
+        max-width: 640px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 19px;
+      }
+      .center {
+        text-align: center;
+      }
+      .center .lead {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 24px;
+        border-radius: 9999px;
+        font-size: 17px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: transform 150ms, background-color 150ms, box-shadow 150ms;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+      .btn-primary {
+        background: #fff;
+        color: #1d4ed8;
+        box-shadow: 0 10px 25px -8px rgb(15 23 42 / 0.4);
+      }
+      .btn-ghost {
+        color: #fff;
+        box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.4);
+      }
+      .btn-ghost:hover {
+        background: rgb(255 255 255 / 0.1);
+      }
+      .btn-solid {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-solid:hover {
+        background: var(--accent-hover);
+      }
+      @media (prefers-color-scheme: dark) {
+        .btn-solid {
+          color: #0b1120;
+        }
+      }
+
+      /* Nav */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: rgb(37 99 235 / 0.85);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+      }
+      nav .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+        font-weight: 800;
+        font-size: 18px;
+        text-decoration: none;
+      }
+      .brand img {
+        width: 32px;
+        height: 32px;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+      }
+      .nav-links a {
+        color: rgb(255 255 255 / 0.85);
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .nav-links a:hover {
+        color: #fff;
+      }
+      .nav-links .btn {
+        padding: 8px 16px;
+        font-size: 15px;
+        color: #1d4ed8;
+      }
+      @media (max-width: 720px) {
+        .nav-links a:not(.btn) {
+          display: none;
+        }
+      }
+
+      /* Hero */
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 72px 0 96px;
+        background:
+          radial-gradient(circle at 85% 10%, rgb(255 255 255 / 0.16), transparent 40%),
+          radial-gradient(circle at 5% 110%, rgb(99 102 241 / 0.7), transparent 55%),
+          var(--grad);
+        color: #fff;
+      }
+      .hero .wrap {
+        display: grid;
+        grid-template-columns: 1fr 1.15fr;
+        gap: 56px;
+        align-items: center;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 9999px;
+        background: rgb(255 255 255 / 0.14);
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .pill::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: #34d399; /* emerald-400 */
+      }
+      .hero h1 {
+        margin-top: 20px;
+        font-size: clamp(40px, 6vw, 64px);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+      }
+      .hero h1 span {
+        background: linear-gradient(90deg, #fde68a, #fdba74);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p {
+        margin-top: 20px;
+        color: rgb(255 255 255 / 0.85);
+        font-size: 20px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 32px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 20px;
+        margin-top: 24px;
+        color: rgb(255 255 255 / 0.75);
+        font-size: 15px;
+      }
+      .meta span::before {
+        content: '✓ ';
+        color: #34d399;
+        font-weight: 700;
+      }
+      .hero-shot {
+        border-radius: 18px;
+        box-shadow: 0 40px 80px -20px rgb(15 23 42 / 0.6);
+        transform: perspective(1400px) rotateY(-8deg) rotateX(3deg);
+      }
+      @media (max-width: 900px) {
+        .hero .wrap {
+          grid-template-columns: 1fr;
+        }
+        .hero-shot {
+          transform: none;
+        }
+      }
+
+      /* Video */
+      .video {
+        background: var(--bg-soft);
+      }
+      .video-frame {
+        overflow: hidden;
+        max-width: 960px;
+        margin: 40px auto 0;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: 0 30px 60px -20px rgb(15 23 42 / 0.35);
+      }
+
+      /* Features */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 48px;
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 600px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        padding: 28px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--card);
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+        transition: transform 150ms, box-shadow 150ms;
+      }
+      .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 32px -16px rgb(15 23 42 / 0.25);
+      }
+      .icon {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 18px;
+        border-radius: 14px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .card h3 {
+        font-size: 20px;
+        font-weight: 750;
+        letter-spacing: -0.01em;
+      }
+      .card p {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      /* Steps */
+      .steps {
+        background: var(--bg-soft);
+      }
+      .steps .wrap {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 56px;
+        align-items: center;
+      }
+      .steps ol {
+        margin-top: 32px;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+      .steps li {
+        position: relative;
+        padding: 0 0 26px 60px;
+        counter-increment: step;
+      }
+      .steps li::before {
+        content: counter(step);
+        position: absolute;
+        left: 0;
+        top: 0;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 9999px;
+        background: var(--grad);
+        color: #fff;
+        font-weight: 800;
+      }
+      .steps li strong {
+        display: block;
+        font-size: 19px;
+      }
+      .steps li span {
+        color: var(--muted);
+      }
+      .steps img {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: 0 30px 60px -20px rgb(15 23 42 / 0.35);
+      }
+      @media (max-width: 900px) {
+        .steps .wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Privacy */
+      .privacy-box {
+        max-width: 800px;
+        margin: 40px auto 0;
+        padding: 36px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--card);
+      }
+      .privacy-box h3 {
+        margin-top: 24px;
+        font-size: 18px;
+      }
+      .privacy-box h3:first-child {
+        margin-top: 0;
+      }
+      .privacy-box p,
+      .privacy-box li {
+        color: var(--muted);
+        font-size: 16px;
+      }
+      .privacy-box ul {
+        margin-top: 6px;
+        padding-left: 20px;
+      }
+      .updated {
+        margin-top: 24px;
+        font-size: 14px !important;
+      }
+
+      /* FAQ */
+      .faq {
+        background: var(--bg-soft);
+      }
+      .faq-list {
+        max-width: 800px;
+        margin: 40px auto 0;
+      }
+      details {
+        border-bottom: 1px solid var(--border);
+      }
+      summary {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 4px;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: 650;
+        list-style: none;
+      }
+      summary::-webkit-details-marker {
+        display: none;
+      }
+      summary::after {
+        content: '+';
+        color: var(--accent);
+        font-size: 24px;
+        line-height: 1;
+        transition: transform 150ms;
+      }
+      details[open] summary::after {
+        transform: rotate(45deg);
+      }
+      details p {
+        padding: 0 4px 20px;
+        color: var(--muted);
+      }
+
+      /* Final CTA */
+      .cta {
+        padding: 96px 0;
+        background:
+          radial-gradient(circle at 15% 0%, rgb(255 255 255 / 0.14), transparent 45%),
+          var(--grad);
+        color: #fff;
+      }
+      .cta .lead {
+        color: rgb(255 255 255 / 0.85);
+      }
+      .cta .actions {
+        justify-content: center;
+      }
+      .cta img {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+      }
+
+      /* Footer */
+      footer {
+        padding: 36px 0;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 14px;
+      }
+      footer .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      footer nav {
+        position: static;
+        display: flex;
+        gap: 20px;
+        background: none;
+        backdrop-filter: none;
+      }
+      footer a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      footer a:hover {
+        color: var(--accent);
+      }
+      .disclaimer {
+        flex-basis: 100%;
+        font-size: 13px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      STORE_URL: replace every href="#install" with the extension's Chrome Web
+      Store link once it is published.
+    -->
+    <nav>
+      <div class="wrap">
+        <a class="brand" href="#top"><img src="assets/icon-128.png" alt="" />FB Ad Blocker</a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#how">How it works</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#faq">FAQ</a>
+          <a class="btn btn-primary" href="#install">Add to Chrome</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="hero" id="top">
+      <div class="wrap">
+        <div>
+          <span class="pill">Free Chrome extension · v1.1.0</span>
+          <h1>Scroll Facebook <span>without the ads.</span></h1>
+          <p>FB Ad Blocker hides sponsored posts the moment they show up in your feed, so you see friends, groups and pages, not paid promotions.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="#install">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              Add to Chrome. It's free.
+            </a>
+            <a class="btn btn-ghost" href="#video">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+              Watch 20s demo
+            </a>
+          </div>
+          <div class="meta">
+            <span>No account</span>
+            <span>No tracking</span>
+            <span>Works instantly</span>
+          </div>
+        </div>
+        <img class="hero-shot" src="assets/hero-feed.png" width="680" height="620" alt="A Facebook-style feed where a sponsored post is marked Removed, with the FB Ad Blocker popup open showing 27 ads blocked." />
+      </div>
+    </header>
+
+    <section class="video" id="video">
+      <div class="wrap center">
+        <p class="eyebrow">See it in action</p>
+        <h2>20 seconds to a cleaner feed</h2>
+        <div class="video-frame">
+          <video src="assets/promo-video.mp4" poster="assets/video-poster.jpg" controls playsinline preload="none" width="1920" height="1080"></video>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap center">
+        <p class="eyebrow">Features</p>
+        <h2>Small extension. Big difference.</h2>
+        <p class="lead">Everything you need to keep sponsored content out of your way, and nothing you don't.</p>
+        <div class="grid" style="text-align: left">
+          <div class="card">
+            <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" /></svg></div>
+            <h3>Clean News Feed</h3>
+            <p>Sponsored posts disappear automatically, including the ones that load as you keep scrolling.</p>
+          </div>
+          <div class="card">
+            <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M15 3v18" /></svg></div>
+            <h3>Tidy sidebar</h3>
+            <p>The "Sponsored" ad box in the right column is hidden too.</p>
+          </div>
+          <div class="card">
+            <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="5" /><circle cx="16" cy="12" r="2.5" /></svg></div>
+            <h3>One-click control</h3>
+            <p>Pause or resume blocking from the toolbar popup, with a live counter of ads blocked.</p>
+          </div>
+          <div class="card">
+            <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></svg></div>
+            <h3>Built for 2026 Facebook</h3>
+            <p>Reads the hidden "Sponsored" label Facebook uses to disguise ads, instead of fragile filter lists.</p>
+          </div>
+          <div class="card">
+            <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg></div>
+            <h3>Zero tracking</h3>
+            <p>No account, no analytics. Your setting and counter never leave your browser.</p>
+          </div>
+          <div class="card">
+            <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9z" /></svg></div>
+            <h3>Lightweight</h3>
+            <p>No external scripts and no filter lists to download. It just runs on www.facebook.com.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps" id="how">
+      <div class="wrap">
+        <div>
+          <p class="eyebrow">How it works</p>
+          <h2>Up and running in seconds</h2>
+          <ol>
+            <li><strong>Add it to Chrome</strong><span>Install FB Ad Blocker from the Chrome Web Store. It's free.</span></li>
+            <li><strong>Open Facebook</strong><span>Go to www.facebook.com. Sponsored posts are hidden automatically.</span></li>
+            <li><strong>Stay in control</strong><span>Click the shield icon in your toolbar to pause or resume blocking anytime.</span></li>
+          </ol>
+          <a class="btn btn-solid" href="#install">Add to Chrome</a>
+        </div>
+        <img src="assets/popup-states.png" width="740" height="420" loading="lazy" alt="The FB Ad Blocker popup shown switched on with 1,234 ads blocked, and switched off." />
+      </div>
+    </section>
+
+    <section id="privacy">
+      <div class="wrap center">
+        <p class="eyebrow">Privacy policy</p>
+        <h2>Your data stays yours</h2>
+        <p class="lead">FB Ad Blocker does not collect, store on a server, sell or share any personal data.</p>
+        <div class="privacy-box" style="text-align: left">
+          <h3>What the extension stores</h3>
+          <p>Two values, saved only in Chrome's local extension storage on your device:</p>
+          <ul>
+            <li>Whether blocking is switched on or off</li>
+            <li>How many ads have been blocked (a number)</li>
+          </ul>
+          <h3>What it does not do</h3>
+          <ul>
+            <li>It does not read, record or send your posts, messages, friends, browsing history or any other content.</li>
+            <li>It does not use analytics, cookies, trackers or remote code.</li>
+            <li>It does not send any data to the developer or to third parties.</li>
+          </ul>
+          <h3>Permissions</h3>
+          <ul>
+            <li><strong>storage</strong>: to save the on/off setting and the counter described above.</li>
+            <li><strong>www.facebook.com</strong>: to find sponsored posts on Facebook pages and hide them. The extension runs on no other site.</li>
+          </ul>
+          <h3>Contact</h3>
+          <p>Questions or problems? Use the <a href="https://forms.gle/DkJNWCp3Q3BXyTXJ8" target="_blank" rel="noopener">issue report form</a>.</p>
+          <p class="updated">Last updated: November 19, 2026</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq" id="faq">
+      <div class="wrap center">
+        <p class="eyebrow">FAQ</p>
+        <h2>Questions, answered</h2>
+        <div class="faq-list" style="text-align: left">
+          <details>
+            <summary>Is FB Ad Blocker free?</summary>
+            <p>Yes. It's free, with no account, subscription or in-app purchases.</p>
+          </details>
+          <details>
+            <summary>Which Facebook languages are supported?</summary>
+            <p>FB Ad Blocker recognizes the sponsored label in English ("Sponsored") and Vietnamese ("Được tài trợ"). If Facebook is set to another language, sponsored posts may not be detected yet.</p>
+          </details>
+          <details>
+            <summary>An ad slipped through. What should I do?</summary>
+            <p>Facebook changes its layout often. Open the extension popup and click "Report issue", or use the <a href="https://forms.gle/DkJNWCp3Q3BXyTXJ8" target="_blank" rel="noopener">report form</a>, so we can update detection.</p>
+          </details>
+          <details>
+            <summary>Does it work on the Facebook mobile app?</summary>
+            <p>No. It's a Chrome extension for desktop, and it runs on www.facebook.com.</p>
+          </details>
+          <details>
+            <summary>I turned blocking off. Why are ads still hidden?</summary>
+            <p>Posts that were already removed stay hidden until you reload the page. New ads will show while blocking is off.</p>
+          </details>
+          <details>
+            <summary>Is this an official Facebook or Meta product?</summary>
+            <p>No. FB Ad Blocker is an independent extension and is not affiliated with, endorsed by, or sponsored by Meta Platforms, Inc.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta" id="install">
+      <div class="wrap center">
+        <img src="assets/icon-128.png" alt="" />
+        <h2>Take back your feed.</h2>
+        <p class="lead">Install FB Ad Blocker and scroll Facebook without sponsored posts.</p>
+        <div class="actions">
+          <!-- Replace with the Chrome Web Store URL once published. -->
+          <a class="btn btn-primary" href="#install">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            Add to Chrome. It's free.
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        <span>© 2026 FB Ad Blocker · v1.1.0</span>
+        <nav>
+          <a href="#privacy">Privacy policy</a>
+          <a href="#faq">FAQ</a>
+          <a href="https://forms.gle/DkJNWCp3Q3BXyTXJ8" target="_blank" rel="noopener">Report issue</a>
+        </nav>
+        <p class="disclaimer">FB Ad Blocker is not affiliated with, endorsed by, or sponsored by Meta Platforms, Inc. Facebook is a trademark of Meta Platforms, Inc.</p>
+      </div>
+    </footer>
+  </body>
+</html>
